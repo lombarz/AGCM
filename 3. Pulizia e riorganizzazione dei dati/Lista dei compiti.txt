@@ -1,0 +1,6 @@
+1) Identificazioni di eventuali problemi e dati corrotti, con seguente rimozione
+2)Rimozione di duplicati 
+3)Eliminazione colonne di dati superflue
+4)Trasformazione dei dati nel formato più funzionale per ogni colonna
+5)Eliminazione di righe e dati con eccessive correzioni
+6)Aggregazione di potenziali dati utili (es.generi)

@@ -1,3 +1,4 @@
+A cura di Lombardi Alex:
 1) Identificazioni di eventuali problemi e dati corrotti, con seguente rimozione
 2)Rimozione di duplicati 
 3)Eliminazione colonne di dati superflue

@@ -28,5 +28,11 @@ df_metadata_clean=aggiusto_liste(df_metadata_clean,'genres','name','genres_list'
 df_metadata_clean=aggiusto_liste(df_metadata_clean,'production_companies','name','production_companies_list')
 df_metadata_clean=aggiusto_liste(df_metadata_clean,'production_countries','name','production_countries_list')
 df_metadata_clean=aggiusto_liste(df_metadata_clean,'spoken_languages','name','spoken_languages_list')
+#lasciare solo l'anno di uscita, rimuovendo la data
+df_metadata_clean['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')#alcune date non erano scritte nel giusto formato
+df_metadata_clean['release_year'] = df_metadata_clean['release_date'].dt.year
+df_metadata_clean['release_year'] = df_metadata_clean['release_year'].fillna(0).astype(int)# Riempire i valori NaN con un valore predefinito (es. 0) e convertire in intero
+df_metadata_clean.drop(columns=['release_date'],inplace=True)
 
-df_metadata_clean.to_csv("C:\\Users\\Utilizzatore\\Desktop\\Academy\\ML Project\\Movies Dataset\\movies_metadata_CLEAN.csv")
+
+df_metadata_clean.to_csv("C:\\Users\\Utilizzatore\\Desktop\\Academy\\ML Project\\Movies Dataset\\movies_metadata_CLEAN.csv",index=False)

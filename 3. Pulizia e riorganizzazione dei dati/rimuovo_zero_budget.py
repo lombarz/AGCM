@@ -14,8 +14,11 @@ print(df.describe())  # Statistiche di base
 # Se la colonna 'production_company' è in formato stringa di lista, convertila in lista Python
 df['production_companies_list'] = df['production_companies_list'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
 
-# Filtra il dataframe per rimuovere le righe con nomi di aziende che contengono numeri
-df_cleaned = df[~df['production_companies_list'].apply(lambda companies: any(contiene_numeri(company) for company in companies))]
+# Rimuovi le case di produzione con numeri
+df['production_companies_list'] = df['production_companies_list'].apply(lambda companies: [company for company in companies if not contiene_numeri(company)])
+
+# Rimuovi le righe dove non è rimasta alcuna casa di produzione
+df_cleaned = df[df['production_companies_list'].apply(lambda x: len(x) > 0)]
 
 
 # Filtra i titoli che NON contengono numeri (rimuovi titoli con numeri come 'se7en')

@@ -1,30 +1,31 @@
 import pandas as pd
 
-df=pd.read_csv('C:\\Users\\Utilizzatore\\Desktop\\Academy\\ML Project\\Movies Dataset\\movies_metadata_CLEAN_ID.csv',low_memory=False)
+# Carica il dataset
+df = pd.read_csv('C:\\Users\\Utilizzatore\\Desktop\\Academy\\ML Project\\Movies Dataset\\movies_metadata_CLEAN_ID.csv', low_memory=False)
+
+# Mostra informazioni di base sul dataset
 print(df.head())
 print(df.info())  # Vedi il tipo di dati
 print(df.describe())  # Statistiche di base
 
-#rimuovo titoli con numeri
-# Filtra i titoli che contengono solo caratteri alfabetici, spazi e segni di punteggiatura
-df_cleaned = df[df['title'].str.contains(r'^[^\d]+$', regex=True, na=False)]
+# Filtra i titoli che NON contengono numeri (rimuovi titoli con numeri come 'se7en')
+df_cleaned = df[~df['title'].str.contains(r'\d', regex=True, na=False)]
 
 # Converti 'budget' e 'revenue' in valori numerici (float), rimuovendo eventuali errori
-df['budget'] = pd.to_numeric(df['budget'], errors='coerce')
-df['revenue'] = pd.to_numeric(df['revenue'], errors='coerce')
+df_cleaned['budget'] = pd.to_numeric(df_cleaned['budget'], errors='coerce')
+df_cleaned['revenue'] = pd.to_numeric(df_cleaned['revenue'], errors='coerce')
 
 # Rimuovi righe con budget pari a 0
-df_cleaned = df[df['budget'] != 0]
+df_cleaned = df_cleaned[df_cleaned['budget'] != 0]
 
-# Rimuovi righe con revenue pari a 0 (su df_cleaned, non su df originale)
+# Rimuovi righe con revenue pari a 0
 df_cleaned = df_cleaned[df_cleaned['revenue'] != 0]
-
-
-
 
 # Salva il file CSV pulito
 df_cleaned.to_csv('C:\\Users\\Utilizzatore\\Desktop\\Academy\\ML Project\\Movies Dataset\\movies_metadata_CLEAN_ID_budget.csv', index=False)
 
+# Mostra il risultato del dataframe pulito
 print(df_cleaned.head())
 print(df_cleaned.info())  # Vedi il tipo di dati
 print(df_cleaned.describe())  # Statistiche di base
+

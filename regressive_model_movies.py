@@ -10,91 +10,48 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from collections import Counter
 
+def creazione_modello(ratings_df,movies_df):
+    # Preprocessing dei dati
+    merged_df = pd.merge(ratings_df, movies_df, on='movieId')
+    # One-Hot Encoding per le colonne categoriali
+    encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+    encoded_genres = encoder.fit_transform(merged_df['genres_list'].values.reshape(-1, 1))
 
-# Caricamento dei dataset
-movies_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\movies_metadata_finale_small.csv')
-ratings_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\ratings_small_finale.csv')
+    # Creazione di un dataframe di input per il modello
+    X = pd.concat([
+        pd.DataFrame(encoded_genres, columns=encoder.get_feature_names_out()),
+        merged_df[['budget', 'runtime', 'popularity', 'vote_average', 'userId']]
+    ], axis=1)
 
-while True:
-    choiche=input("Benvenuto, scegli un'opzione:\n 1= Consigli film per un nuovo utente \n 2= Consigli film per un utente esistente\n 3=esci")
-    if choiche=='1':
-        max=ratings_df['userId'].max()
-        id_request=max+1
-        sorted_movies = movies_df.sort_values(by='vote_count', ascending=False)
-        count=0
-        while True:
-          for index, row in sorted_movies.iterrows():
-            title = row['title']
-            vote_count = row['vote_count']
-            # Chiedi all'utente
-            response = input(f"Hai visto '{title}'? (s/n): ").strip().lower()
+    # Target: valutazione del film
+    y = merged_df['rating'].values
 
-            # Puoi registrare la risposta in un elenco o elaborare ulteriormente
-            if response == 's':
-               vote=int(input('Dagli un punteggio da 0 a 10(intero):'))#continuiamo da qui domani
-               if vote in range (0,11):
-                 count+=1
-                 if count==10:
-                   break
-                 else:
-                   continue
-               else:
-                 print("il voto non è valido")
-            elif response == 'n':
-               continue
-            else:
-               print("Risposta non valida. Si prega di rispondere con 's' o 'n'.")
-    elif choiche=='2':
-        id=int(input("Inserisci l'id utente:"))
-        if id in merged_df['userId']:
-            id_request=id
-        else:
-            print("Utente non presente")
-    elif choiche == '3':
-        print('Arrivederci!')
-        break
-    else:
-        print('Scelta non valida')
-# Preprocessing dei dati
-merged_df = pd.merge(ratings_df, movies_df, on='movieId')
-# One-Hot Encoding per le colonne categoriali
-encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-encoded_genres = encoder.fit_transform(merged_df['genres_list'].values.reshape(-1, 1))
+    # Suddivisione dei dati in set di addestramento e test
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
 
-# Creazione di un dataframe di input per il modello
-X = pd.concat([
-    pd.DataFrame(encoded_genres, columns=encoder.get_feature_names_out()),
-    merged_df[['budget', 'runtime', 'popularity', 'vote_average', 'userId']]
-], axis=1)
+    # Normalizzazione delle caratteristiche
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
-# Target: valutazione del film
-y = merged_df['rating'].values
+    # Costruzione del modello
+    model = Sequential()
+    model.add(Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(1, activation='linear'))  
 
-# Suddivisione dei dati in set di addestramento e test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+    # Compilazione del modello
+    model.compile(optimizer=Adam(learning_rate=0.01), loss='mean_squared_error')
 
-# Normalizzazione delle caratteristiche
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-# Costruzione del modello
-model = Sequential()
-model.add(Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)))
-model.add(Dense(64, activation='relu'))
-model.add(Dense(1, activation='linear'))  
-
-# Compilazione del modello
-model.compile(optimizer=Adam(learning_rate=0.01), loss='mean_squared_error')
-
-# Addestramento del modello
-model.fit(X_train_scaled, y_train, epochs=10, batch_size=32, validation_data=(X_test_scaled, y_test))
+    # Addestramento del modello
+    model.fit(X_train_scaled, y_train, epochs=10, batch_size=32, validation_data=(X_test_scaled, y_test))
+    return (model,encoder,scaler,X_test_scaled,X_train_scaled,X_train, y_test)
 
 def round_to_nearest_int(x):
     return np.round(x)
 
 # Funzione per proporre i film
-def recommend_movies(user_id, ratings_df, model, movies_df, encoder, scaler, num_recommendations=20):
+def recommend_movies(user_id, ratings_df, model, movies_df, encoder, scaler,X_train, num_recommendations):
     # Assicurati che la colonna 'genres_list' sia una lista di stringhe
     if movies_df['genres_list'].dtype == 'object':
         movies_df['genres_list'] = movies_df['genres_list'].apply(lambda x: eval(x) if isinstance(x, str) else x)
@@ -184,9 +141,75 @@ def previsioni_esistenti(test, etichetta, modello):
     plt.title('Matrice di Confusione')
     plt.show()
 
-# Valutazione della performance
-previsioni_esistenti(X_test_scaled, y_test, model)
+# Caricamento dei dataset
+movies_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\movies_metadata_finale_small.csv')
+ratings_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\ratings_small_finale.csv')
 
-# Raccomandazione per un utente
-recommended = recommend_movies(user_id=id_request, ratings_df=ratings_df, model=model, movies_df=movies_df, encoder=encoder, scaler=scaler)
-print(recommended)
+while True:
+    choiche=input("Benvenuto, scegli un'opzione:\n 1= Consigli film per un nuovo utente \n 2= Consigli film per un utente esistente\n 3=verifica del rendimento del modello\n4=esci")
+    if choiche=='1':
+        max=ratings_df['userId'].max()
+        id_request=max+1
+        sorted_movies = movies_df.sort_values(by='vote_count', ascending=False)
+        count=0
+        for index, row in sorted_movies.iterrows():
+            title = row['title']
+            movieId = row['movieId']
+            # Chiedi all'utente
+            response = input(f"Hai visto '{title}'? (s/n): ").strip().lower()
+
+            # Se l'utente ha visto il film, chiedi il voto
+            if response == 's':
+                try:
+                    vote = int(input('Dagli un punteggio da 0 a 10 (intero): '))
+                except ValueError:
+                    print("Input non valido, per favore inserisci un numero intero.")
+                    continue
+                if vote in range(0, 11):
+                    # Aggiungi una nuova riga al DataFrame ratings_df
+                    ratings_df.loc[len(ratings_df)] = [id_request, movieId, vote]
+                
+                    count += 1  # Incrementa il contatore
+                    if count == 10:  # Interrompi il ciclo se l'utente ha valutato 10 film
+                        break
+                else:
+                    print("Il voto non è valido. Inserisci un valore tra 0 e 10.")
+        
+            elif response == 'n':
+               continue
+    
+            else:
+              print("Risposta non valida. Si prega di rispondere con 's' o 'n'.")
+        #de-commentare la prossima riga se si vogliono salvare le nuove valutazioni nel dataframe
+        #ratings_df.to_csv('ML Project\\Movies Dataset\\csv giusti\\ratings_small_finale.csv',index=False)
+        (model,encoder,scaler,X_test_scaled,X_train_scaled,X_train, y_test)=creazione_modello(ratings_df,movies_df)
+        # Raccomandazione per un utente
+        recommended = recommend_movies(user_id=id_request, ratings_df=ratings_df, model=model, movies_df=movies_df, encoder=encoder, scaler=scaler,X_train=X_train,num_recommendations=10)
+        print(recommended)
+    elif choiche=='2':
+        id=int(input("Inserisci l'id utente:"))
+        if id in ratings_df['userId']:
+            id_request=id
+        else:
+            print("Utente non presente")
+        (model,encoder,scaler,X_test_scaled,X_train_scaled,X_train, y_test)=creazione_modello(ratings_df,movies_df)
+        # Raccomandazione per un utente
+        recommended = recommend_movies(user_id=id_request, ratings_df=ratings_df, model=model, movies_df=movies_df, encoder=encoder, scaler=scaler,X_train=X_train,num_recommendations=10)
+        print(recommended)
+    elif choiche=='3':
+        print('Verifica del rendimento del modello')
+        (model,encoder,scaler,X_test_scaled,X_train_scaled,X_train, y_test)=creazione_modello(ratings_df,movies_df)
+        # Valutazione della performance
+        previsioni_esistenti(test=X_test_scaled, etichetta=y_test, modello=model)
+    elif choiche == '4':
+        print('Arrivederci!')
+        break
+    else:
+        print('Scelta non valida')
+
+
+
+
+
+
+

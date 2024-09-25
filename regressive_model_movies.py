@@ -5,11 +5,16 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 # Caricamento dei dataset
-movies_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\movies_metadata_comuni_small.csv')
-ratings_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\ratings_comuni_small.csv')
-
+movies_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\movies_metadata_finale_small.csv')
+ratings_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\ratings_small_finale.csv')
+# ratings_df['ratings']=ratings_df['ratings']*2
+# ratings_df['ratings']=ratings_df['ratings'].astype(int)
 # Preprocessing dei dati
 merged_df = pd.merge(ratings_df, movies_df, on='movieId')
 
@@ -38,18 +43,19 @@ X_test_scaled = scaler.transform(X_test)
 model = Sequential()
 model.add(Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)))
 model.add(Dense(64, activation='relu'))
-model.add(Dense(1, activation='linear'))  # Output per la valutazione, va aumentato?
+model.add(Dense(1, activation='linear'))  
+model.add(Dense(10, activation='softmax'))# Output per la valutazione
 
 # Compilazione del modello
 model.compile(optimizer=Adam(learning_rate=0.001), loss='mean_squared_error')#learning rate?
 
 # Addestramento del modello
-model.fit(X_train_scaled, y_train, epochs=5, batch_size=32, validation_data=(X_test_scaled, y_test))
+model.fit(X_train_scaled, y_train, epochs=10, batch_size=32, validation_data=(X_test_scaled, y_test))
 
 #A questo punto c'è una parte di prediction per i film non visti. Prima si potrebbe fare una parte di prediction solo per i film visti da ogni singolo utente dati dal training per valutare l'accuratezza
 
-def round_to_nearest_half(x):
-    return np.round(x * 2) / 2  # Arrotonda al più vicino 0.5
+def round_to_nearest_int(x):
+    return np.round(x)  # Arrotonda al più vicino 0.5
 
 # Funzione di raccomandazione
 def recommend_movies(user_id, ratings_df, model, movies_df, num_recommendations=20):
@@ -64,7 +70,7 @@ def recommend_movies(user_id, ratings_df, model, movies_df, num_recommendations=
         for index, row in user_movies.iterrows():
             title = movies_df[movies_df['movieId'] == row['movieId']]['title'].values[0]
             print(f" - {title} (Rating: {row['rating']})")
-            print(f" - {title} (Generi: {row['genres_list']})")#aggiunto stamattina per il controllo dei generi stampati, controllare
+            #print(f" - {title} (Generi: {row['genres_list']})")#aggiunto stamattina per il controllo dei generi stampati, controllare
     else:
         print(f"L'utente {user_id} non ha visto alcun film.")
 
@@ -92,10 +98,10 @@ def recommend_movies(user_id, ratings_df, model, movies_df, num_recommendations=
     predicted_ratings = model.predict(unseen_X_scaled)
     
     # Limita le valutazioni previste tra 0 e 5
-    predicted_ratings = np.clip(predicted_ratings, 0, 5)
+    #predicted_ratings = np.clip(predicted_ratings, 0, 5)
     
     # Arrotonda le previsioni al più vicino multiplo di 0.5
-    predicted_ratings = round_to_nearest_half(predicted_ratings)
+    #predicted_ratings = round_to_nearest_half(predicted_ratings)
 
     # Aggiungi le previsioni al dataframe dei film
     unseen_movies['predicted_rating'] = predicted_ratings.flatten()
@@ -104,8 +110,25 @@ def recommend_movies(user_id, ratings_df, model, movies_df, num_recommendations=
     recommended_movies = unseen_movies.sort_values(by='predicted_rating', ascending=False).head(num_recommendations)
     return recommended_movies[['title', 'predicted_rating']]
 
+def previsioni_esistenti(test, etichetta, modello):
 
+    # Previsione delle valutazioni
+    predicted_ratings = modello.predict(test)
+    predicted_ratings=round_to_nearest_int(predicted_ratings)
+    predicted_ratings = np.clip(predicted_ratings, 0, 10)#serve solo per un numero basso di epoche
+    cm = confusion_matrix(etichetta, predicted_ratings)
+    
+    
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
 
+    # Aggiungere etichette
+    plt.xlabel('Voti previsti')
+    plt.ylabel('Voti reali')
+    plt.title('Matrice di Confusione')
+    plt.show()
+    
+
+previsioni_esistenti(X_test_scaled, y_test, model)
 # Raccomandazione per un utente
-recommended = recommend_movies(user_id=15, ratings_df=ratings_df, model=model, movies_df=movies_df)
+recommended = recommend_movies(user_id=1, ratings_df=ratings_df, model=model, movies_df=movies_df)
 print(recommended)

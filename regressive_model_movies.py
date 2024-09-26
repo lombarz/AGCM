@@ -41,7 +41,7 @@ def creazione_modello(ratings_df,movies_df):
     model.add(Dense(1, activation='linear'))  
 
     # Compilazione del modello
-    model.compile(optimizer=Adam(learning_rate=0.01), loss='mean_squared_error')
+    model.compile(optimizer=Adam(learning_rate=0.001), loss='mean_squared_error')
 
     # Addestramento del modello
     model.fit(X_train_scaled, y_train, epochs=10, batch_size=32, validation_data=(X_test_scaled, y_test))
@@ -124,29 +124,29 @@ def recommend_movies(user_id, ratings_df, model, movies_df, encoder, scaler,X_tr
 
     return recommended_movies[['title', 'predicted_rating', 'genres_list']]
 
-def previsioni_esistenti(test, etichetta, modello):
+def previsioni_esistenti(test, voti_reali, modello):
     # Previsione delle valutazioni
     predicted_ratings = modello.predict(test)
     predicted_ratings = round_to_nearest_int(predicted_ratings)
     predicted_ratings = np.clip(predicted_ratings, 0, 10)
-    cm = confusion_matrix(etichetta, predicted_ratings)
-    accuracy = accuracy_score(etichetta, predicted_ratings)
+    cm = confusion_matrix(voti_reali, predicted_ratings)
+    accuracy = accuracy_score(voti_reali, predicted_ratings)
     print(f"Accuracy: {accuracy:.2f}")
     
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
 
     # Aggiungere etichette
-    plt.ylabel('Voti previsti')
-    plt.xlabel('Voti reali')
-    plt.title('Matrice di Confusione')
+    plt.xlabel('Voti previsti')
+    plt.ylabel('Voti reali')
+    plt.title(f'Matrice di Confusione per la previsione delle valutazioni (Accuracy: {accuracy:.2f})')
     plt.show()
 
 # Caricamento dei dataset
 movies_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\movies_metadata_finale_small.csv')
 ratings_df = pd.read_csv('ML Project\\Movies Dataset\\csv giusti\\ratings_small_finale.csv')
-
+print('Benvenuto nel modello di Machine Learning per il suggerimento di film!')
 while True:
-    choiche=input("Benvenuto, scegli un'opzione:\n 1= Consigli film per un nuovo utente \n 2= Consigli film per un utente esistente\n 3=verifica del rendimento del modello\n4=esci")
+    choiche=input("Scegli un'opzione:\n1= Consigli film per un nuovo utente \n2= Consigli film per un utente esistente\n3=verifica del rendimento del modello\n4=esci")
     if choiche=='1':
         max=ratings_df['userId'].max()
         id_request=max+1
@@ -155,7 +155,6 @@ while True:
         for index, row in sorted_movies.iterrows():
             title = row['title']
             movieId = row['movieId']
-            # Chiedi all'utente
             response = input(f"Hai visto '{title}'? (s/n): ").strip().lower()
 
             # Se l'utente ha visto il film, chiedi il voto
@@ -176,16 +175,18 @@ while True:
                     print("Il voto non è valido. Inserisci un valore tra 0 e 10.")
         
             elif response == 'n':
-               continue
-    
+                continue
+
             else:
-              print("Risposta non valida. Si prega di rispondere con 's' o 'n'.")
+                print("Risposta non valida. Si prega di rispondere con 's' o 'n'.")
         #de-commentare la prossima riga se si vogliono salvare le nuove valutazioni nel dataframe
         #ratings_df.to_csv('ML Project\\Movies Dataset\\csv giusti\\ratings_small_finale.csv',index=False)
         (model,encoder,scaler,X_test_scaled,X_train_scaled,X_train, y_test)=creazione_modello(ratings_df,movies_df)
         # Raccomandazione per un utente
         recommended = recommend_movies(user_id=id_request, ratings_df=ratings_df, model=model, movies_df=movies_df, encoder=encoder, scaler=scaler,X_train=X_train,num_recommendations=10)
         print(recommended)
+        print('Credits:\nLombardi Alex\nGiacomo Vecchio\nCosimo Zaccaria\nMascia Mattia\nTHE END')
+        break
     elif choiche=='2':
         id=int(input("Inserisci l'id utente:"))
         if id in ratings_df['userId']:
@@ -196,13 +197,17 @@ while True:
         # Raccomandazione per un utente
         recommended = recommend_movies(user_id=id_request, ratings_df=ratings_df, model=model, movies_df=movies_df, encoder=encoder, scaler=scaler,X_train=X_train,num_recommendations=10)
         print(recommended)
+        print('Credits:\nLombardi Alex\nGiacomo Vecchio\nCosimo Zaccaria\nMascia Mattia\nTHE END')
+        break
     elif choiche=='3':
         print('Verifica del rendimento del modello')
         (model,encoder,scaler,X_test_scaled,X_train_scaled,X_train, y_test)=creazione_modello(ratings_df,movies_df)
         # Valutazione della performance
-        previsioni_esistenti(test=X_test_scaled, etichetta=y_test, modello=model)
+        previsioni_esistenti(test=X_test_scaled, voti_reali=y_test, modello=model)
+        print('Credits:\nLombardi Alex\nGiacomo Vecchio\nCosimo Zaccaria\nMascia Mattia\nTHE END')
+        break
     elif choiche == '4':
-        print('Arrivederci!')
+        print('Credits:\nLombardi Alex\nGiacomo Vecchio\nCosimo Zaccaria\nMascia Mattia\nTHE END')
         break
     else:
         print('Scelta non valida')
